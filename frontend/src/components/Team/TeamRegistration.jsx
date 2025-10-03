@@ -1,14 +1,29 @@
-import React, { useState } from 'react';
-import { teamAPI } from '../../utils/api';
+import React, { useState, useEffect } from 'react';
+import { venueAPI, teamAPI } from '../../utils/api';
 
 const TeamRegistration = ({ onRegistrationSuccess }) => {
+  const [venues, setVenues] = useState([]);
   const [formData, setFormData] = useState({
     teamName: '',
     leaderName: '',
     email: '',
+    venueId: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchVenues();
+  }, []);
+
+  const fetchVenues = async () => {
+    try {
+      const response = await venueAPI.getAll();
+      setVenues(response.data);
+    } catch (error) {
+      console.error('Failed to fetch venues');
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -24,7 +39,7 @@ const TeamRegistration = ({ onRegistrationSuccess }) => {
 
     try {
       const response = await teamAPI.register(formData);
-      localStorage.setItem('teamId', response.data.teamId);
+      localStorage.setItem('teamId', response.data.team.id);
       localStorage.setItem('teamData', JSON.stringify(response.data.team));
       onRegistrationSuccess(response.data.team);
     } catch (error) {
@@ -85,6 +100,31 @@ const TeamRegistration = ({ onRegistrationSuccess }) => {
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Select Venue
+          </label>
+          <select
+            name="venueId"
+            value={formData.venueId}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select a venue</option>
+            {venues.map((venue) => (
+              <option 
+                key={venue.id} 
+                value={venue.id}
+                disabled={venue.isFull}
+              >
+                {venue.venueName} ({venue.teamsCount}/5 teams)
+                {venue.isFull && ' - FULL'}
+              </option>
+            ))}
+          </select>
         </div>
 
         <button
