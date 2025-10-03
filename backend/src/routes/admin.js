@@ -1,288 +1,275 @@
 const express = require('express');
-const Question = require('../models/Question');
-const Team = require('../models/Team');
-const Answer = require('../models/Answer');
+const db = require('../db/queries');
 const QRGenerator = require('../utils/qrGenerator');
-const { validateQuestionUpload } = require('../middleware/validation');
 const router = express.Router();
 
-// Upload questions
-router.post('/questions', validateQuestionUpload, async (req, res) => {
+// Setup venues (8 venues)
+router.post('/venues/setup', async (req, res) => {
   try {
-    const { questions } = req.body;
+    const venueNames = [
+      'Venue A', 'Venue B', 'Venue C', 'Venue D',
+      'Venue E', 'Venue F', 'Venue G', 'Venue H'
+    ];
 
-    // Clear existing questions (optional - remove if you want to keep existing)
-    await Question.deleteMany({});
+    const venues = await db.createVenues(venueNames);
 
-    // Process and save new questions
-    const questionsToSave = questions.map(q => ({
-      questionId: q.questionId,
-      questionText: q.questionText,
-      correctAnswer: q.correctAnswer,
-      points: q.points || 10,
-      qrToken: QRGenerator.generateToken(),
-      isAnswered: false,
-      answeredBy: null,
-      answeredAt: null,
-      isActive: true
-    }));
-
-    const savedQuestions = await Question.insertMany(questionsToSave);
-
-    res.json({ 
-      message: `${questions.length} questions uploaded successfully`,
-      count: questions.length,
-      questions: savedQuestions.map(q => ({
-        id: q._id,
-        questionId: q.questionId,
-        questionText: q.questionText,
-        points: q.points
+    res.json({
+      success: true,
+      message: 'Venues created successfully',
+      count: venues.length,
+      venues: venues.map(v => ({
+        id: v.id,
+        venueName: v.venue_name,
+        isActive: v.is_active
       }))
     });
   } catch (error) {
-    console.error('Question upload error:', error);
+    console.error('Setup venues error:', error);
     res.status(500).json({ 
+      success: false,
       message: 'Server error', 
       error: error.message 
     });
   }
 });
 
-// Generate QR codes for all questions
-router.post('/generate-qr-codes', async (req, res) => {
+// Upload questions
+router.post('/questions', async (req, res) => {
   try {
-    const questions = await Question.find({ isActive: true }).sort({ questionId: 1 });
-    
-    if (questions.length === 0) {
+    const { questions } = req.body;
+
+    if (!Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({ 
-        message: 'No questions found. Upload questions first.' 
+        success: false,
+        message: 'Questions array is required' 
       });
     }
 
-    // Generate QR codes using the existing tokens
-    const qrCodes = await QRGenerator.generateBulkQRCodes(questions);
+    // Clear existing data
+    await db.deleteAllQuestions();
+
+    // Create questions
+    const createdQuestions = await db.createQuestions(questions);
 
     res.json({
+      success: true,
+      message: `${createdQuestions.length} questions uploaded successfully`,
+      count: createdQuestions.length,
+      questions: createdQuestions.map(q => ({
+        id: q.id,
+        questionText: q.question_text,
+        correctOption: q.correct_option,
+        basePoints: q.base_points
+      }))
+    });
+  } catch (error) {
+    console.error('Upload questions error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+});
+
+// Assign questions to all venues
+router.post('/assign-questions-to-venues', async (req, res) => {
+  try {
+    const venues = await db.getAllVenues();
+    const questions = await db.getAllQuestions();
+
+    if (venues.length === 0 || questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please create venues and questions first'
+      });
+    }
+
+    // Create venue question assignments
+    const venueQuestions = [];
+    for (const venue of venues) {
+      for (const question of questions) {
+        venueQuestions.push({
+          venueId: venue.id,
+          questionId: question.id,
+          isActive: true,
+          qrToken: QRGenerator.generateToken()
+        });
+      }
+    }
+
+    await db.createVenueQuestions(venueQuestions);
+
+    res.json({
+      success: true,
+      message: 'Questions assigned to all venues successfully',
+      totalAssignments: venueQuestions.length,
+      venues: venues.length,
+      questionsPerVenue: questions.length
+    });
+  } catch (error) {
+    console.error('Assign questions error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+});
+
+// Generate QR codes for specific venue
+router.get('/qr-codes/venue/:venueId', async (req, res) => {
+  try {
+    const { venueId } = req.params;
+
+    const venue = await db.getVenueById(parseInt(venueId));
+    if (!venue) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Venue not found' 
+      });
+    }
+
+    const venueQuestions = await db.getVenueQuestions(parseInt(venueId));
+
+    const qrCodes = [];
+    for (const vq of venueQuestions) {
+      const qrData = await QRGenerator.generateQRCode(
+        venue.id,
+        vq.question_id,
+        vq.qr_token
+      );
+      qrCodes.push({
+        venueId: venue.id,
+        venueName: venue.venue_name,
+        questionId: vq.question_id,
+        questionText: vq.question_text,
+        token: vq.qr_token,
+        qrUrl: qrData.url,
+        qrCodeImage: qrData.qrCodeDataURL
+      });
+    }
+
+    res.json({
+      success: true,
       message: 'QR codes generated successfully',
+      venue: venue.venue_name,
       count: qrCodes.length,
       qrCodes
     });
   } catch (error) {
-    console.error('QR generation error:', error);
+    console.error('Generate QR codes error:', error);
     res.status(500).json({ 
+      success: false,
       message: 'Server error', 
       error: error.message 
     });
   }
 });
 
-// Get all questions for admin dashboard
-router.get('/questions', async (req, res) => {
+// Generate QR codes for all venues
+router.get('/qr-codes/all', async (req, res) => {
   try {
-    const questions = await Question.find({ isActive: true })
-      .populate('answeredBy', 'teamName leaderName')
-      .sort({ questionId: 1 });
+    const venues = await db.getAllVenues();
+    
+    const allQRCodes = [];
+    for (const venue of venues) {
+      const venueQuestions = await db.getVenueQuestions(venue.id);
+      
+      const qrCodes = [];
+      for (const vq of venueQuestions) {
+        const qrData = await QRGenerator.generateQRCode(
+          venue.id,
+          vq.question_id,
+          vq.qr_token
+        );
+        qrCodes.push({
+          venueId: venue.id,
+          venueName: venue.venue_name,
+          questionId: vq.question_id,
+          questionText: vq.question_text,
+          token: vq.qr_token,
+          qrUrl: qrData.url,
+          qrCodeImage: qrData.qrCodeDataURL
+        });
+      }
+      
+      allQRCodes.push({
+        venueId: venue.id,
+        venueName: venue.venue_name,
+        qrCodes
+      });
+    }
 
-    const questionsData = questions.map(q => ({
-      id: q._id,
-      questionId: q.questionId,
-      questionText: q.questionText,
-      correctAnswer: q.correctAnswer,
-      points: q.points,
-      isAnswered: q.isAnswered,
-      answeredBy: q.answeredBy ? {
-        teamName: q.answeredBy.teamName,
-        leaderName: q.answeredBy.leaderName
-      } : null,
-      answeredAt: q.answeredAt,
-      qrToken: q.qrToken
-    }));
-
-    res.json(questionsData);
+    res.json({
+      success: true,
+      message: 'QR codes generated for all venues',
+      count: allQRCodes.length,
+      venues: allQRCodes
+    });
   } catch (error) {
-    console.error('Get questions error:', error);
+    console.error('Generate all QR codes error:', error);
     res.status(500).json({ 
-      message: 'Server error',
+      success: false,
+      message: 'Server error', 
       error: error.message 
     });
   }
 });
 
-// Get event statistics for admin dashboard
+// Get admin statistics
 router.get('/stats', async (req, res) => {
   try {
-    const [totalQuestions, answeredQuestions, totalTeams, totalAnswers] = await Promise.all([
-      Question.countDocuments({ isActive: true }),
-      Question.countDocuments({ isAnswered: true }),
-      Team.countDocuments({ isActive: true }),
-      Answer.countDocuments({})
-    ]);
+    const stats = await db.getAdminStats();
+    const venueStats = await db.getVenueStats();
 
-    const correctAnswers = await Answer.countDocuments({ isCorrect: true });
-    const incorrectAnswers = totalAnswers - correctAnswers;
-
-    // Get top performing teams
-    const topTeams = await Team.find({ isActive: true })
-      .sort({ totalPoints: -1 })
-      .limit(5)
-      .select('teamName totalPoints');
-
-    // Get recent activity
-    const recentAnswers = await Answer.find({})
-      .populate('teamId', 'teamName')
-      .populate('questionId', 'questionId questionText')
-      .sort({ createdAt: -1 })
-      .limit(10);
+    const totalAttempts = parseInt(stats.total_attempts || 0);
+    const correctAttempts = parseInt(stats.correct_attempts || 0);
 
     res.json({
-      totalQuestions,
-      answeredQuestions,
-      remainingQuestions: totalQuestions - answeredQuestions,
-      totalTeams,
-      totalAnswers,
-      correctAnswers,
-      incorrectAnswers,
-      accuracy: totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0,
-      topTeams,
-      recentActivity: recentAnswers.map(a => ({
-        teamName: a.teamId?.teamName || 'Unknown',
-        questionId: a.questionId?.questionId || 'N/A',
-        questionText: a.questionId?.questionText || 'N/A',
-        isCorrect: a.isCorrect,
-        pointsAwarded: a.pointsAwarded,
-        submittedAt: a.createdAt
+      success: true,
+      totalVenues: parseInt(stats.total_venues || 0),
+      totalTeams: parseInt(stats.total_teams || 0),
+      teamsPerVenue: stats.total_venues > 0 ? 
+        Math.round(stats.total_teams / stats.total_venues) : 0,
+      totalQuestions: parseInt(stats.total_questions || 0),
+      totalAttempts,
+      correctAttempts,
+      incorrectAttempts: totalAttempts - correctAttempts,
+      accuracy: totalAttempts > 0 ? 
+        Math.round((correctAttempts / totalAttempts) * 100) : 0,
+      venueStats: venueStats.map(v => ({
+        venueName: v.venue_name,
+        teamsCount: parseInt(v.teams_count || 0),
+        expiredQuestions: parseInt(v.expired_questions || 0)
       }))
     });
   } catch (error) {
-    console.error('Stats error:', error);
+    console.error('Get stats error:', error);
     res.status(500).json({ 
-      message: 'Server error',
+      success: false,
+      message: 'Error fetching admin stats', 
       error: error.message 
     });
   }
 });
 
-// Reset event (clear all data) - USE WITH CAUTION
+// Reset event
 router.post('/reset-event', async (req, res) => {
   try {
-    // Clear all answers
-    await Answer.deleteMany({});
-    
-    // Reset all questions
-    await Question.updateMany(
-      { isActive: true },
-      { 
-        isAnswered: false, 
-        answeredBy: null, 
-        answeredAt: null 
-      }
-    );
-    
-    // Reset all team points
-    await Team.updateMany(
-      { isActive: true },
-      { totalPoints: 0 }
-    );
+    await db.resetEvent();
 
-    // Emit leaderboard update
     req.io?.to('leaderboard').emit('leaderboard-update');
 
-    res.json({
-      message: 'Event reset successfully. All questions are now available and team scores reset to 0.'
+    res.json({ 
+      success: true,
+      message: 'Event reset successfully' 
     });
   } catch (error) {
     console.error('Reset event error:', error);
     res.status(500).json({ 
-      message: 'Server error',
-      error: error.message 
-    });
-  }
-});
-
-// Delete a specific question
-router.delete('/questions/:questionId', async (req, res) => {
-  try {
-    const { questionId } = req.params;
-
-    const question = await Question.findById(questionId);
-    if (!question) {
-      return res.status(404).json({ message: 'Question not found' });
-    }
-
-    // Delete related answers
-    await Answer.deleteMany({ questionId: question._id });
-
-    // Delete the question
-    await Question.findByIdAndDelete(questionId);
-
-    res.json({ 
-      message: 'Question deleted successfully' 
-    });
-  } catch (error) {
-    console.error('Delete question error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: error.message 
-    });
-  }
-});
-
-// Update a specific question
-router.put('/questions/:questionId', async (req, res) => {
-  try {
-    const { questionId } = req.params;
-    const { questionText, correctAnswer, points } = req.body;
-
-    const question = await Question.findById(questionId);
-    if (!question) {
-      return res.status(404).json({ message: 'Question not found' });
-    }
-
-    // Don't allow editing if already answered
-    if (question.isAnswered) {
-      return res.status(400).json({ 
-        message: 'Cannot edit question that has already been answered' 
-      });
-    }
-
-    // Update question
-    question.questionText = questionText || question.questionText;
-    question.correctAnswer = correctAnswer || question.correctAnswer;
-    question.points = points || question.points;
-
-    await question.save();
-
-    res.json({ 
-      message: 'Question updated successfully',
-      question: {
-        id: question._id,
-        questionId: question.questionId,
-        questionText: question.questionText,
-        correctAnswer: question.correctAnswer,
-        points: question.points
-      }
-    });
-  } catch (error) {
-    console.error('Update question error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: error.message 
-    });
-  }
-});
-
-// Get all teams for admin
-router.get('/teams', async (req, res) => {
-  try {
-    const teams = await Team.find({ isActive: true })
-      .sort({ totalPoints: -1, createdAt: 1 })
-      .select('teamName leaderName email totalPoints createdAt');
-
-    res.json(teams);
-  } catch (error) {
-    console.error('Get teams error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
+      success: false,
+      message: 'Server error', 
       error: error.message 
     });
   }

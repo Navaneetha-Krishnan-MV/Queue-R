@@ -4,10 +4,11 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
-const connectDB = require('./config/database');
+const { testConnection } = require('./config/database');
 
 // Import routes
 const adminRoutes = require('./routes/admin');
+const venueRoutes = require('./routes/venues');
 const teamRoutes = require('./routes/teams');
 const questionRoutes = require('./routes/questions');
 const leaderboardRoutes = require('./routes/leaderboard');
@@ -16,13 +17,16 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
 
-// Connect Database
-connectDB();
+// Test database connection
+testConnection().catch(err => {
+  console.error('Failed to connect to database');
+  process.exit(1);
+});
 
 // Middleware
 app.use(cors());
@@ -37,9 +41,15 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/admin', adminRoutes);
+app.use('/api/venues', venueRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
@@ -47,6 +57,10 @@ io.on('connection', (socket) => {
   
   socket.on('join-leaderboard', () => {
     socket.join('leaderboard');
+  });
+
+  socket.on('join-venue', (venueId) => {
+    socket.join(`venue-${venueId}`);
   });
 
   socket.on('disconnect', () => {
@@ -57,10 +71,15 @@ io.on('connection', (socket) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  res.status(500).json({ 
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Frontend URL: ${process.env.FRONTEND_URL}`);
+  console.log(`💾 Database: Neon PostgreSQL`);
 });

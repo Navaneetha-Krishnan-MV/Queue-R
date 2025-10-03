@@ -1,16 +1,27 @@
-const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-const connectDB = async () => {
+const { neon } = require('@neondatabase/serverless');
+
+// Create database connection
+const client = neon(process.env.DATABASE_URL);
+
+// Add unsafe method for raw SQL queries
+const sql = Object.assign(
+  (strings, ...values) => client(strings, ...values),
+  { unsafe: client }
+);
+
+// Test connection
+const testConnection = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    const result = await sql`SELECT NOW()`;
+    console.log('✅ Database connected successfully:', result[0].now);
+    return true;
   } catch (error) {
-    console.error('Database connection error:', error);
-    process.exit(1);
+    console.error('❌ Database connection failed:', error);
+    throw error;
   }
 };
 
-module.exports = connectDB;
+module.exports = { sql, testConnection };
