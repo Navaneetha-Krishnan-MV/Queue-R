@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI, venueAPI } from '../../utils/api';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 const QRGenerator = () => {
   const [venues, setVenues] = useState([]);
@@ -43,13 +45,57 @@ const QRGenerator = () => {
 
   const generateAllQR = async () => {
     setLoading(true);
-    setMessage('');
+    setMessage('Generating QR codes for all venues...');
 
     try {
       const response = await adminAPI.getAllQRCodes();
-      setMessage(`✅ Generated QR codes for all venues`);
-      // You could display all QR codes here if needed
+      const qrData = response.data.qrCodes;
+      
+      if (!qrData || qrData.length === 0) {
+        setMessage('❌ No QR codes found');
+        return;
+      }
+
+      // Group QR codes by venue
+      const venuesMap = new Map();
+      
+      qrData.forEach(item => {
+        if (!venuesMap.has(item.venueId)) {
+          venuesMap.set(item.venueId, {
+            venueName: item.venueName,
+            qrCodes: []
+          });
+        }
+        venuesMap.get(item.venueId).qrCodes.push(item);
+      });
+
+      // Create zip file
+      const zip = new JSZip();
+      
+      // Process each venue
+      for (const [venueId, venueData] of venuesMap.entries()) {
+        const venueFolder = zip.folder(venueData.venueName.replace(/[^a-z0-9]/gi, '_'));
+        
+        // Add QR codes to venue folder
+        for (const qr of venueData.qrCodes) {
+          // Extract base64 data from the image URL
+          const base64Data = qr.qrCodeImage.split(',')[1];
+          const filename = `Q${qr.questionId}.png`;
+          
+          // Add file to zip
+          venueFolder.file(filename, base64Data, { base64: true });
+        }
+      }
+
+      // Generate zip file
+      const content = await zip.generateAsync({ type: 'blob' });
+      
+      // Download the zip file
+      saveAs(content, 'venue_qr_codes.zip');
+      
+      setMessage('✅ Successfully downloaded QR codes for all venues');
     } catch (error) {
+      console.error('Error generating QR codes:', error);
       setMessage(`❌ ${error.response?.data?.message || 'Failed to generate QR codes'}`);
     } finally {
       setLoading(false);

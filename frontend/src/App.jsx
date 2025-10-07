@@ -12,9 +12,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/admin" element={<Admin />} />
-        <Route path="/venue/:venueId/questions" element={<QuestionList />} />
         <Route path="/venue/:venueId/question/:questionId" element={<VenueQuestions />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/leaderboard" element={<Layout><Leaderboard /></Layout>} />
       </Routes>
     </Router>
   );
