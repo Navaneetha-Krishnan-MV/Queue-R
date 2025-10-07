@@ -11,17 +11,28 @@ const QuestionTimer = ({
   const intervalRef = useRef(null);
   const startTimeRef = useRef(Date.now());
 
+  // Separate effect for timer reset when isActive or timeLimit changes
+  useEffect(() => {
+    if (isActive && timeLimit > 0) {
+      startTimeRef.current = Date.now();
+      setTimeRemaining(timeLimit);
+      setIsRunning(true);
+    } else {
+      setIsRunning(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+  }, [isActive, timeLimit]);
+
+  // Main timer effect
   useEffect(() => {
     if (!isActive) {
-      setIsRunning(false);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
       return;
     }
-
-    startTimeRef.current = Date.now();
-    setIsRunning(true);
 
     intervalRef.current = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
@@ -33,7 +44,8 @@ const QuestionTimer = ({
         onTimeUpdate(elapsed);
       }
 
-      if (remaining === 0) {
+      if (remaining <= 0) {
+        console.log('Timer reached 0, calling onTimeUp');
         setIsRunning(false);
         clearInterval(intervalRef.current);
         if (onTimeUp) {

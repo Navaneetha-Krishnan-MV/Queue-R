@@ -5,7 +5,6 @@ import Admin from './pages/Admin';
 import VenueQuestions from './pages/VenueQuestions';
 import Leaderboard from './pages/Leaderboard';
 import QuestionList from './components/Team/QuestionList';
-import Layout from './components/Common/Layout';
 
 function App() {
   return (
@@ -13,6 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/venue/:venueId/questions" element={<QuestionList />} />
         <Route path="/venue/:venueId/question/:questionId" element={<VenueQuestions />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
       </Routes>

@@ -77,9 +77,9 @@ router.get('/venue/:venueId/question/:questionId', async (req, res) => {
     });
   } catch (error) {
     console.error('Get question error:', error);
-    res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
     });
   }
 });
@@ -88,100 +88,157 @@ router.get('/venue/:venueId/question/:questionId', async (req, res) => {
 router.post('/venue/:venueId/question/:questionId/answer', async (req, res) => {
   try {
     const { venueId, questionId } = req.params;
-    const { teamId, chosenOption, timeTaken, token } = req.body;
+    const { teamId, chosenOption, timeTaken, token, notAttempted, submittedAt, isTimeout, submissionType } = req.body;
 
-    // Validate inputs
-    if (!teamId || !chosenOption || timeTaken === undefined || !token) {
-      return res.status(400).json({ 
-        message: 'All fields are required' 
+    // Validate and parse IDs
+    const parsedTeamId = parseInt(teamId);
+    const parsedVenueId = parseInt(venueId);
+    const parsedQuestionId = parseInt(questionId);
+
+    if (isNaN(parsedTeamId) || isNaN(parsedVenueId) || isNaN(parsedQuestionId)) {
+      console.log('Invalid ID parameters:', { teamId, venueId, questionId });
+      return res.status(400).json({
+        message: 'Invalid ID parameters'
       });
     }
 
-    if (!PointsCalculator.isTimeValid(timeTaken)) {
-      return res.status(400).json({ 
-        message: 'Invalid time taken' 
+
+    // Validate inputs
+    if (!teamId || (chosenOption === undefined || chosenOption === null) || timeTaken === undefined || !token) {
+      return res.status(400).json({
+        message: 'All fields are required'
       });
+    }
+
+    if (submittedAt) {
+      const clientLatency = Date.now() - new Date(submittedAt).getTime();
+      console.log(`Answer submission latency: ${clientLatency}ms`);
+    }
+
+    // Handle timeout scenarios specially
+    if (isTimeout || submissionType === 'timeout') {
+      console.log('Processing timeout submission');
+
+      // For timeout scenarios, we can add special handling
+      // For example, different messaging or analytics tracking
+
+      // Since it's a timeout, we could modify the response message
+      // or add timeout-specific fields to the response
     }
 
     // Verify team
-    const team = await db.getTeamById(parseInt(teamId));
-    if (!team || team.venue_id !== parseInt(venueId)) {
-      return res.status(403).json({ 
-        message: 'Invalid team or venue' 
+    const team = await db.getTeamById(parsedTeamId);
+    if (!team || team.venue_id !== parsedVenueId) {
+      console.log('Team verification failed:', {
+        teamId: parsedTeamId,
+        venueId: parsedVenueId,
+        teamFound: !!team,
+        teamVenueId: team?.venue_id
+      });
+      return res.status(403).json({
+        message: 'Invalid team or venue'
       });
     }
 
+    // Store team score for response (before any modifications)
+    const originalTeamScore = team.score;
+
     // Get venue question
     const venueQuestion = await db.getVenueQuestion(
-      parseInt(venueId),
-      parseInt(questionId),
+      parsedVenueId,
+      parsedQuestionId,
       token
     );
 
     if (!venueQuestion || !venueQuestion.is_active) {
-      return res.status(410).json({ 
-        message: 'Question not available' 
+      console.log('Question not available:', { venueId: parsedVenueId, questionId: parsedQuestionId, isActive: venueQuestion?.is_active });
+      return res.status(410).json({
+        message: 'Question not available'
       });
     }
 
     // Check existing attempt
     const existingAttempt = await db.checkTeamAttempt(
-      parseInt(teamId),
-      parseInt(questionId),
-      parseInt(venueId)
+      parsedTeamId,
+      parsedQuestionId,
+      parsedVenueId
     );
 
     if (existingAttempt) {
-      return res.status(400).json({ 
-        message: 'You have already attempted this question' 
+      console.log('Duplicate attempt detected');
+      return res.status(400).json({
+        message: 'You have already attempted this question'
       });
     }
 
     // Check answer
-    const isCorrect = chosenOption.toUpperCase() === 
+    const isCorrect = chosenOption.toUpperCase() ===
                      venueQuestion.correct_option.toUpperCase();
-    
-    const pointsAwarded = isCorrect ? 
+
+    console.log('Answer validation:', {
+      chosenOption,
+      correctOption: venueQuestion.correct_option,
+      isCorrect,
+      isTimeout: isTimeout || false,
+      submissionType
+    });
+
+    const pointsAwarded = isCorrect ?
       PointsCalculator.calculatePoints(venueQuestion.base_points, timeTaken) : 0;
 
     // Create attempt
     await db.createAttempt(
-      parseInt(teamId),
-      parseInt(questionId),
-      parseInt(venueId),
+      parsedTeamId,
+      parsedQuestionId,
+      parsedVenueId,
       chosenOption.toUpperCase(),
       isCorrect,
       timeTaken,
       pointsAwarded
     );
 
+    console.log('Attempt created successfully');
+
     // If correct, expire question and update score
     if (isCorrect) {
-      await db.expireVenueQuestion(parseInt(venueId), parseInt(questionId));
-      await db.updateTeamScore(parseInt(teamId), pointsAwarded);
+      await db.expireVenueQuestion(parsedVenueId, parsedQuestionId);
+      await db.updateTeamScore(parsedTeamId, pointsAwarded);
 
       // Emit real-time updates
       req.io?.to('leaderboard').emit('leaderboard-update');
-      req.io?.to(`venue-${venueId}`).emit('question-expired', {
-        questionId: parseInt(questionId)
+      req.io?.to(`venue-${parsedVenueId}`).emit('question-expired', {
+        questionId: parsedQuestionId
       });
     }
 
+    console.log('Sending response:', {
+      isCorrect,
+      pointsAwarded,
+      notAttempted,
+      isTimeout,
+      submissionType
+    });
+
     res.json({
-      message: isCorrect ? 
-        `Correct! You earned ${pointsAwarded} points.` : 
-        'Incorrect answer. No points awarded.',
+      message: isCorrect ?
+        `Correct! You earned ${pointsAwarded} points.` :
+        (isTimeout || submissionType === 'timeout') ?
+          'Time expired! No points awarded.' :
+          'Incorrect answer. No points awarded.',
       isCorrect,
       pointsAwarded,
       correctAnswer: !isCorrect ? venueQuestion.correct_option : undefined,
       timeTaken,
-      teamScore: isCorrect ? team.score + pointsAwarded : team.score
+      teamScore: isCorrect ? originalTeamScore + pointsAwarded : originalTeamScore,
+      notAttempted: notAttempted || false,
+      isTimeout: isTimeout || false,
+      submissionType: submissionType || 'manual'
     });
   } catch (error) {
     console.error('Answer submission error:', error);
-    res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
     });
   }
 });
