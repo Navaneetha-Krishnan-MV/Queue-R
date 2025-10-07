@@ -1,5 +1,6 @@
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
+const config = require('../config/env');
 
 class QRGenerator {
   static generateToken() {
@@ -7,7 +8,7 @@ class QRGenerator {
   }
 
   static async generateQRCode(venueId, questionId, token) {
-    const url = `${process.env.FRONTEND_URL}/venue/${venueId}/question/${questionId}?token=${token}`;
+    const url = `${config.FRONTEND_URL}/venue/${venueId}/question/${questionId}?token=${token}`;
     try {
       const qrCodeDataURL = await QRCode.toDataURL(url, {
         width: 300,

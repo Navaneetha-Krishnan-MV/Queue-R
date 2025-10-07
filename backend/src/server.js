@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 const { testConnection } = require('./config/database');
+const config = require('./config/env');
 
 // Import routes
 const adminRoutes = require('./routes/admin');
@@ -17,7 +18,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: config.FRONTEND_URL,
     methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
@@ -73,13 +74,13 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: config.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = config.PORT;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Frontend URL: ${process.env.FRONTEND_URL}`);
+  console.log(`📊 Frontend URL: ${config.FRONTEND_URL}`);
   console.log(`💾 Database: Neon PostgreSQL`);
 });

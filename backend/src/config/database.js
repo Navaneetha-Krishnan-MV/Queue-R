@@ -1,10 +1,11 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+const config = require('./env');
 
 const { neon } = require('@neondatabase/serverless');
 
 // Create database connection
-const client = neon(process.env.DATABASE_URL);
+const client = neon(config.DATABASE_URL);
 
 // Add unsafe method for raw SQL queries
 const sql = Object.assign(
