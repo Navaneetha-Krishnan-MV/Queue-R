@@ -8,7 +8,7 @@ const VenueQuestions = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
-  
+
   const [question, setQuestion] = useState(null);
   const [selectedOption, setSelectedOption] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,11 +31,13 @@ const VenueQuestions = () => {
   const fetchQuestion = async () => {
     try {
       const response = await questionAPI.getQuestion(
-        venueId, 
-        questionId, 
-        token, 
+        venueId,
+        questionId,
+        token,
         teamId
       );
+      console.log('Question data received:', response.data);
+      console.log('timeLimit value:', response.data.timeLimit);
       setQuestion(response.data);
       setTimerActive(true);
     } catch (error) {
@@ -50,36 +52,61 @@ const VenueQuestions = () => {
   };
 
   const handleTimeUp = async () => {
+    console.log('handleTimeUp called - timer expired');
     setTimerActive(false);
-    if (!result && selectedOption) {
-      await handleSubmit(null, true);
-    } else {
-      setError('Time is up! You did not select an answer.');
+    if (!result) {
+      // Submit empty answer (wrong by default) when time runs out
+      setSelectedOption('');
+
+      // Calculate exact time when timer expired
+      const timeWhenExpired = question.timeLimit || 20; // This should be the max time (20 seconds)
+
+      console.log('Submitting timeout answer');
+      await handleSubmit(null, true, timeWhenExpired);
+      console.log('Timeout answer submitted successfully');
     }
   };
 
-  const handleSubmit = async (e, isTimeUp = false) => {
+  const handleSubmit = async (e, isTimeUp = false, timeWhenExpired = null) => {
     if (e) e.preventDefault();
-    
     if (!selectedOption && !isTimeUp) {
       setError('Please select an option');
       return;
     }
+
+    console.log('handleSubmit called with:', {
+      selectedOption,
+      isTimeUp,
+      timeWhenExpired,
+      timeTaken,
+      teamId,
+      venueId,
+      questionId,
+      token
+    });
 
     setSubmitting(true);
     setTimerActive(false);
     setError('');
 
     try {
+      console.log('Making API call to submit answer...');
       const response = await questionAPI.submitAnswer(venueId, questionId, {
         teamId: parseInt(teamId),
         chosenOption: selectedOption,
-        timeTaken: timeTaken,
-        token
+        timeTaken: timeWhenExpired || timeTaken,
+        token,
+        notAttempted: isTimeUp,  // Flag to indicate timeout
+        isTimeout: isTimeUp,     // Special identifier for timeout scenarios
+        submissionType: isTimeUp ? 'timeout' : 'manual',  // Explicit timeout indicator
+        submittedAt: new Date().toISOString()  // When request was sent
       });
-      
+
+      console.log('API response received:', response.data);
       setResult(response.data);
     } catch (error) {
+      console.error('API call failed:', error);
+      console.error('Error response:', error.response?.data);
       setError(error.response?.data?.message || 'Failed to submit answer');
       setTimerActive(true);
     } finally {
@@ -117,8 +144,8 @@ const VenueQuestions = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto text-center">
           <div className={`p-6 rounded-lg ${
-            result.isCorrect 
-              ? 'bg-green-100 border border-green-400 text-green-700' 
+            result.isCorrect
+              ? 'bg-green-100 border border-green-400 text-green-700'
               : 'bg-red-100 border border-red-400 text-red-700'
           }`}>
             <div className="text-6xl mb-4">
@@ -128,7 +155,7 @@ const VenueQuestions = () => {
               {result.isCorrect ? 'Correct Answer!' : 'Incorrect Answer'}
             </h2>
             <p className="text-lg mb-4">{result.message}</p>
-            
+
             {result.isCorrect && (
               <>
                 <p className="font-medium text-xl mb-2">
@@ -142,14 +169,14 @@ const VenueQuestions = () => {
                 </p>
               </>
             )}
-            
+
             {!result.isCorrect && result.correctAnswer && (
               <p className="mt-4">
                 Correct answer: <span className="font-bold">{result.correctAnswer}</span>
               </p>
             )}
           </div>
-          
+
           <div className="mt-6 space-y-3">
             <button
               onClick={() => navigate(`/venue/${venueId}/questions`)}
@@ -176,7 +203,7 @@ const VenueQuestions = () => {
           {/* Timer */}
           <div className="mb-6">
             <QuestionTimer
-              timeLimit={question.timeLimit}
+              timeLimit={question.timeLimit || 20}
               onTimeUp={handleTimeUp}
               isActive={timerActive}
               onTimeUpdate={handleTimeUpdate}
