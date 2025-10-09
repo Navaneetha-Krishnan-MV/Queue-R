@@ -66,6 +66,8 @@ export const adminAPI = {
   generateRegistrationCodes: (data) => api.post('/api/admin/registration-codes/generate', data),
   getRegistrationCodes: () => api.get('/api/admin/registration-codes'),
   deleteRegistrationCode: (codeId) => api.delete(`/api/admin/registration-codes/${codeId}`),
+  getStats: () => api.get('/api/admin/stats'),
+  resetEvent: () => api.post('/api/admin/reset-event'),
 };
 
 // Leaderboard API
