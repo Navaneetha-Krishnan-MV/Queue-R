@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS venues (
 -- Teams Table
 CREATE TABLE IF NOT EXISTS teams (
     id SERIAL PRIMARY KEY,
-    team_name VARCHAR(100) UNIQUE NOT NULL,
+    team_name VARCHAR(100) NOT NULL,
     leader_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     venue_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
@@ -34,6 +34,16 @@ CREATE TABLE IF NOT EXISTS admins (
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Registration codes table
+CREATE TABLE IF NOT EXISTS registration_codes (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    used_by INTEGER REFERENCES teams(id) ON DELETE SET NULL,
+    used_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Questions Table

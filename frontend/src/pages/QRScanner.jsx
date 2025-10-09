@@ -1,10 +1,12 @@
 // src/pages/QRScanner.jsx
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTeamAuth } from '../context/TeamAuthContext';
 import QrScanner from 'qr-scanner';
 
 const QRScanner = () => {
   const navigate = useNavigate();
+  const { team } = useTeamAuth();
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
   const scannerRef = useRef(null);
@@ -15,9 +17,6 @@ const QRScanner = () => {
   const [error, setError] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
   const [currentCamera, setCurrentCamera] = useState('environment');
-
-  const teamId = localStorage.getItem('teamId');
-  const teamData = JSON.parse(localStorage.getItem('teamData') || '{}');
 
   // Handle QR code scan result
   const handleScanResult = useCallback((result) => {
@@ -274,7 +273,7 @@ const QRScanner = () => {
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-white">Scan QR Code</h2>
-                <p className="text-xs text-slate-400">{teamData.venue || 'Loading...'}</p>
+                <p className="text-xs text-slate-400">{team?.venue || 'Loading...'}</p>
               </div>
             </div>
             <button 

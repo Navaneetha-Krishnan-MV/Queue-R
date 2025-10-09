@@ -138,6 +138,34 @@ class DatabaseQueries {
     return result[0];
   }
 
+  static async getTeamByName(teamName) {
+    const result = await sql`
+      SELECT 
+        t.id,
+        t.team_name,
+        t.leader_name,
+        t.email,
+        t.venue_id,
+        t.score,
+        t.is_active,
+        t.created_at,
+        v.venue_name
+      FROM teams t
+      JOIN venues v ON v.id = t.venue_id
+      WHERE t.team_name = ${teamName}
+    `;
+    return result[0];
+  }
+
+  static async verifyTeamRegistrationCode(teamId, code) {
+    const result = await sql`
+      SELECT * FROM registration_codes
+      WHERE code = ${code} AND used_by = ${teamId}
+      LIMIT 1
+    `;
+    return result[0] ? true : false;
+  }
+
   // ============ QUESTIONS ============
   static async createQuestions(questions) {
     const result = [];
@@ -434,16 +462,100 @@ class DatabaseQueries {
     `;
   }
 
+  // ============ REGISTRATION CODES ============
+  static async createRegistrationCodes(codes) {
+    const result = [];
+    for (const code of codes) {
+      const registrationCode = await sql`
+        INSERT INTO registration_codes (code)
+        VALUES (${code})
+        ON CONFLICT (code) DO NOTHING
+        RETURNING *
+      `;
+      if (registrationCode[0]) {
+        result.push(registrationCode[0]);
+      }
+    }
+    return result;
+  }
+
+  static async getUnusedRegistrationCodes() {
+    return await sql`
+      SELECT * FROM registration_codes
+      WHERE is_used = false
+      ORDER BY created_at DESC
+    `;
+  }
+
+  static async getAllRegistrationCodes() {
+    return await sql`
+      SELECT
+        rc.id,
+        rc.code,
+        rc.is_used,
+        rc.used_by,
+        rc.used_at,
+        rc.created_at,
+        t.team_name,
+        t.leader_name
+      FROM registration_codes rc
+      LEFT JOIN teams t ON t.id = rc.used_by
+      ORDER BY rc.created_at DESC
+    `;
+  }
+
+  static async useRegistrationCode(code, teamId) {
+    const result = await sql`
+      UPDATE registration_codes
+      SET
+        is_used = true,
+        used_by = ${teamId},
+        used_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE code = ${code} AND is_used = false
+      RETURNING *
+    `;
+    return result[0];
+  }
+
+  static async validateRegistrationCode(code) {
+    const result = await sql`
+      SELECT * FROM registration_codes
+      WHERE code = ${code} AND is_used = false
+      LIMIT 1
+    `;
+    return result[0];
+  }
+
+  static async getRegistrationCodeStats() {
+    const result = await sql`
+      SELECT
+        (SELECT COUNT(*) FROM registration_codes) as total_codes,
+        (SELECT COUNT(*) FROM registration_codes WHERE is_used = false) as available_codes,
+        (SELECT COUNT(*) FROM registration_codes WHERE is_used = true) as used_codes
+    `;
+    return result[0];
+  }
+
+  static async deleteUnusedRegistrationCode(codeId) {
+    const result = await sql`
+      DELETE FROM registration_codes
+      WHERE id = ${codeId} AND is_used = false
+      RETURNING *
+    `;
+    return result[0];
+  }
+
   // ============ RESET ============
   static async resetEvent() {
     await sql`DELETE FROM attempts`;
     await sql`UPDATE teams SET score = 0, updated_at = CURRENT_TIMESTAMP WHERE is_active = true`;
     await sql`
-      UPDATE venue_questions 
-      SET 
-        is_active = true, 
-        is_answered = false, 
-        answered_by = NULL, 
+      UPDATE venue_questions
+      SET
+        is_active = true,
+        is_answered = false,
+        answered_by = NULL,
         answered_at = NULL,
         updated_at = CURRENT_TIMESTAMP
     `;

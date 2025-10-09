@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { questionAPI } from '../utils/api';
+import { useTeamAuth } from '../context/TeamAuthContext';
 import QuestionTimer from '../components/Team/QuestionTimer';
 
 const VenueQuestions = () => {
@@ -8,6 +9,7 @@ const VenueQuestions = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
+  const { team } = useTeamAuth();
 
   const [question, setQuestion] = useState(null);
   const [selectedOption, setSelectedOption] = useState('');
@@ -18,15 +20,11 @@ const VenueQuestions = () => {
   const [timeTaken, setTimeTaken] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
 
-  const teamId = localStorage.getItem('teamId');
-
   useEffect(() => {
-    if (!teamId) {
-      navigate('/', { state: { error: 'Please register first' } });
-      return;
+    if (team) {
+      fetchQuestion();
     }
-    fetchQuestion();
-  }, [venueId, questionId, token]);
+  }, [venueId, questionId, token, team]);
 
   const fetchQuestion = async () => {
     try {
@@ -34,7 +32,7 @@ const VenueQuestions = () => {
         venueId,
         questionId,
         token,
-        teamId
+        team.id
       );
       console.log('Question data received:', response.data);
       console.log('timeLimit value:', response.data.timeLimit);
@@ -92,14 +90,14 @@ const VenueQuestions = () => {
     try {
       console.log('Making API call to submit answer...');
       const response = await questionAPI.submitAnswer(venueId, questionId, {
-        teamId: parseInt(teamId),
+        teamId: parseInt(team.id),
         chosenOption: selectedOption,
         timeTaken: timeWhenExpired || timeTaken,
         token,
-        notAttempted: isTimeUp,  // Flag to indicate timeout
-        isTimeout: isTimeUp,     // Special identifier for timeout scenarios
-        submissionType: isTimeUp ? 'timeout' : 'manual',  // Explicit timeout indicator
-        submittedAt: new Date().toISOString()  // When request was sent
+        notAttempted: isTimeUp,
+        isTimeout: isTimeUp,
+        submissionType: isTimeUp ? 'timeout' : 'manual',
+        submittedAt: new Date().toISOString()
       });
 
       console.log('API response received:', response.data);
@@ -168,12 +166,6 @@ const VenueQuestions = () => {
                   Total Score: {result.teamScore}
                 </p>
               </>
-            )}
-
-            {!result.isCorrect && result.correctAnswer && (
-              <p className="mt-4">
-                Correct answer: <span className="font-bold">{result.correctAnswer}</span>
-              </p>
             )}
           </div>
 

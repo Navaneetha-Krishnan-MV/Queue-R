@@ -274,4 +274,102 @@ router.post('/reset-event', async (req, res) => {
   }
 });
 
+// ============ REGISTRATION CODES ============
+
+// Generate registration codes
+router.post('/registration-codes/generate', async (req, res) => {
+  try {
+    const { count, prefix = 'QR' } = req.body;
+
+    if (!count || count <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Count must be a positive number'
+      });
+    }
+
+    // Generate unique codes
+    const codes = [];
+    for (let i = 0; i < count; i++) {
+      const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+      codes.push(`${prefix}${randomPart}`);
+    }
+
+    // Create codes in database
+    const createdCodes = await db.createRegistrationCodes(codes);
+
+    res.json({
+      success: true,
+      message: `${createdCodes.length} registration codes generated successfully`,
+      count: createdCodes.length,
+      codes: createdCodes.map(c => c.code)
+    });
+  } catch (error) {
+    console.error('Generate codes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Get all registration codes
+router.get('/registration-codes', async (req, res) => {
+  try {
+    const codes = await db.getAllRegistrationCodes();
+    const stats = await db.getRegistrationCodeStats();
+
+    res.json({
+      success: true,
+      stats,
+      codes: codes.map(c => ({
+        id: c.id,
+        code: c.code,
+        isUsed: c.is_used,
+        usedBy: c.team_name ? {
+          teamName: c.team_name,
+          leaderName: c.leader_name
+        } : null,
+        usedAt: c.used_at,
+        createdAt: c.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Get codes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Delete unused registration codes
+router.delete('/registration-codes/:codeId', async (req, res) => {
+  try {
+    const { codeId } = req.params;
+
+    const deletedCode = await db.deleteUnusedRegistrationCode(parseInt(codeId));
+    if (!deletedCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Code not found or already used'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Registration code deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
