@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { questionAPI } from '../utils/api';
-import { useTeamAuth } from '../context/TeamAuthContext';
 import QuestionTimer from '../components/Team/QuestionTimer';
 
 const VenueQuestions = () => {
@@ -9,7 +8,6 @@ const VenueQuestions = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
-  const { team } = useTeamAuth();
 
   const [question, setQuestion] = useState(null);
   const [selectedOption, setSelectedOption] = useState('');
@@ -18,13 +16,14 @@ const VenueQuestions = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [timeTaken, setTimeTaken] = useState(0);
+  const teamId = localStorage.getItem('teamId');
   const [timerActive, setTimerActive] = useState(false);
 
   useEffect(() => {
-    if (team) {
+    if (teamId) {
       fetchQuestion();
     }
-  }, [venueId, questionId, token, team]);
+  }, [venueId, questionId, token, teamId]);
 
   const fetchQuestion = async () => {
     try {
@@ -32,7 +31,7 @@ const VenueQuestions = () => {
         venueId,
         questionId,
         token,
-        team.id
+        teamId
       );
       console.log('Question data received:', response.data);
       console.log('timeLimit value:', response.data.timeLimit);
@@ -90,7 +89,7 @@ const VenueQuestions = () => {
     try {
       console.log('Making API call to submit answer...');
       const response = await questionAPI.submitAnswer(venueId, questionId, {
-        teamId: parseInt(team.id),
+        teamId: parseInt(teamId),
         chosenOption: selectedOption,
         timeTaken: timeWhenExpired || timeTaken,
         token,
