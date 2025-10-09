@@ -84,28 +84,16 @@ const Home = () => {
                 </ol>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col items-center justify-center space-y-4">
                 <button
-                  onClick={() => navigate(`/venue/${teamData.venueId}/questions`)}
-                  className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 font-semibold text-lg"
+                  onClick={() => navigate(`/QRScanner`)}
+                  className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 font-semibold text-lg transition-colors duration-200 flex items-center"
                 >
-                  📝 View Questions
+                  <span className="mr-2">📷</span> Open QR Scanner
                 </button>
-                
-                <button
-                  onClick={() => navigate('/leaderboard')}
-                  className="bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 font-semibold text-lg"
-                >
-                  🏆 Leaderboard
-                </button>
+                <p className="text-gray-600 text-center">Use this to scan QR codes placed around your venue</p>
               </div>
 
-              <button
-                onClick={handleStartOver}
-                className="w-full mt-4 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
-              >
-                Register Different Team
-              </button>
             </div>
 
             {/* Game Rules Card */}

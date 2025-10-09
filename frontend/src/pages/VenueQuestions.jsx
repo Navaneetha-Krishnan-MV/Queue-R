@@ -179,10 +179,10 @@ const VenueQuestions = () => {
 
           <div className="mt-6 space-y-3">
             <button
-              onClick={() => navigate(`/venue/${venueId}/questions`)}
+              onClick={() => navigate(`/QRScanner`)}
               className="w-full bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
             >
-              Back to Questions
+              Back to QRScanner
             </button>
             <button
               onClick={() => navigate('/leaderboard')}

@@ -43,22 +43,45 @@ const QRGenerator = () => {
     }
   };
 
+
+  
   const generateAllQR = async () => {
     setLoading(true);
     setMessage('Generating QR codes for all venues...');
-
+  
     try {
+      // ✅ Axios response.data is where the backend data lives
       const response = await adminAPI.getAllQRCodes();
-      const qrData = response.data.qrCodes;
-      
-      if (!qrData || qrData.length === 0) {
-        setMessage('❌ No QR codes found');
+      const allVenues = response?.data?.venues || [];
+  
+      if (!allVenues.length) {
+        setMessage('❌ No venues found');
+        setLoading(false);
         return;
       }
-
-      // Group QR codes by venue
+  
+      // ✅ Flatten nested QR codes for all venues
+      const qrData = [];
+      allVenues.forEach(venue => {
+        (venue.qrCodes || []).forEach(qr => {
+          qrData.push({
+            ...qr,
+            venueId: venue.venueId,
+            venueName: venue.venueName
+          });
+        });
+      });
+  
+      console.log('Flattened QR Data:', qrData);
+  
+      if (!qrData.length) {
+        setMessage('❌ No QR codes found');
+        setLoading(false);
+        return;
+      }
+  
+      // ✅ Group QR codes by venue
       const venuesMap = new Map();
-      
       qrData.forEach(item => {
         if (!venuesMap.has(item.venueId)) {
           venuesMap.set(item.venueId, {
@@ -68,39 +91,52 @@ const QRGenerator = () => {
         }
         venuesMap.get(item.venueId).qrCodes.push(item);
       });
-
-      // Create zip file
+  
+      // ✅ Create a ZIP for all venues
       const zip = new JSZip();
-      
-      // Process each venue
+  
       for (const [venueId, venueData] of venuesMap.entries()) {
-        const venueFolder = zip.folder(venueData.venueName.replace(/[^a-z0-9]/gi, '_'));
-        
-        // Add QR codes to venue folder
+        const sanitizedVenueName = venueData.venueName.replace(/[^a-z0-9_\-\s]/gi, '_').trim();
+        const venueFolder = zip.folder(sanitizedVenueName);
+  
         for (const qr of venueData.qrCodes) {
-          // Extract base64 data from the image URL
-          const base64Data = qr.qrCodeImage.split(',')[1];
-          const filename = `Q${qr.questionId}.png`;
-          
-          // Add file to zip
-          venueFolder.file(filename, base64Data, { base64: true });
+          try {
+            const base64Data = qr.qrCodeImage.startsWith('data:')
+              ? qr.qrCodeImage.split(',')[1]
+              : qr.qrCodeImage;
+  
+            if (!base64Data) {
+              console.error(`No base64 data for question ${qr.questionId}`);
+              continue;
+            }
+  
+            const filename = `${sanitizedVenueName}_Q${qr.questionId}.png`;
+            venueFolder.file(filename, base64Data, { base64: true });
+          } catch (err) {
+            console.error(`Error processing QR code for question ${qr.questionId}:`, err);
+          }
         }
       }
-
-      // Generate zip file
-      const content = await zip.generateAsync({ type: 'blob' });
-      
-      // Download the zip file
-      saveAs(content, 'venue_qr_codes.zip');
-      
-      setMessage('✅ Successfully downloaded QR codes for all venues');
+  
+      // ✅ Generate the ZIP file
+      const content = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+  
+      const timestamp = new Date().toISOString().slice(0, 10);
+      saveAs(content, `venue_qr_codes_${timestamp}.zip`);
+  
+      setMessage(`✅ Successfully downloaded ${qrData.length} QR codes for ${venuesMap.size} venues`);
     } catch (error) {
       console.error('Error generating QR codes:', error);
-      setMessage(`❌ ${error.response?.data?.message || 'Failed to generate QR codes'}`);
+      setMessage(`❌ ${error.response?.data?.message || error.message || 'Failed to generate QR codes'}`);
     } finally {
       setLoading(false);
     }
   };
+  
 
   const downloadQRCode = (qrCodeImage, venueName, questionId) => {
     const link = document.createElement('a');

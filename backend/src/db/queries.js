@@ -1,6 +1,35 @@
 const { sql } = require('../config/database');
+const { hashPassword } = require('../utils/auth');
 
 class DatabaseQueries {
+  // ============ ADMIN AUTHENTICATION ============
+  static async createAdmin(username, password) {
+    const hashedPassword = await hashPassword(password);
+    const [admin] = await sql`
+      INSERT INTO admins (username, password_hash)
+      VALUES (${username}, ${hashedPassword})
+      RETURNING id, username, created_at
+    `;
+    return admin;
+  }
+
+  static async findAdminByUsername(username) {
+    const [admin] = await sql`
+      SELECT id, username, password_hash, created_at 
+      FROM admins 
+      WHERE username = ${username}
+    `;
+    return admin || null;
+  }
+
+  static async getAdminById(id) {
+    const [admin] = await sql`
+      SELECT id, username, created_at 
+      FROM admins 
+      WHERE id = ${id}
+    `;
+    return admin || null;
+  }
   // ============ VENUES ============
   static async getAllVenues() {
     return await sql`

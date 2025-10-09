@@ -149,7 +149,7 @@ router.get('/qr-codes/venue/:venueId', async (req, res) => {
         qrCodeImage: qrData.qrCodeDataURL
       });
     }
-
+    
     res.json({
       success: true,
       message: 'QR codes generated successfully',
@@ -171,7 +171,7 @@ router.get('/qr-codes/venue/:venueId', async (req, res) => {
 router.get('/qr-codes/all', async (req, res) => {
   try {
     const venues = await db.getAllVenues();
-    
+
     const allQRCodes = [];
     for (const venue of venues) {
       const venueQuestions = await db.getVenueQuestions(venue.id);
@@ -200,7 +200,6 @@ router.get('/qr-codes/all', async (req, res) => {
         qrCodes
       });
     }
-
     res.json({
       success: true,
       message: 'QR codes generated for all venues',

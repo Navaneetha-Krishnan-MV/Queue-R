@@ -9,10 +9,12 @@ const config = require('./config/env');
 
 // Import routes
 const adminRoutes = require('./routes/admin');
+const authRoutes = require('./routes/auth');
 const venueRoutes = require('./routes/venues');
 const teamRoutes = require('./routes/teams');
 const questionRoutes = require('./routes/questions');
 const leaderboardRoutes = require('./routes/leaderboard');
+const auth = require('./middleware/auth');
 
 const app = express();
 const server = createServer(app);
@@ -40,8 +42,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
-app.use('/api/admin', adminRoutes);
+// Public routes
+app.use('/api/admin/auth', authRoutes);
+
+// Protected admin routes
+app.use('/api/admin', auth, adminRoutes);
+
+// Public API routes
 app.use('/api/venues', venueRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/questions', questionRoutes);

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI } from '../utils/api';
-import VenueManagement from '../components/Admin/VenueManagement';
-import QuestionUpload from '../components/Admin/QuestionUpload';
-import QRGenerator from '../components/Admin/QRGenerator';
+import { adminAPI } from '../../utils/api';
+import VenueManagement from './VenueManagement';
+import QuestionUpload from './QuestionUpload';
+import QRGenerator from './QRGenerator';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('setup');

@@ -33,8 +33,29 @@ export const questionAPI = {
     api.get(`/api/questions/venue/${venueId}/available?teamId=${teamId}`),
 };
 
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Admin API
 export const adminAPI = {
+  // Auth
+  login: (credentials) => api.post('/api/admin/auth/login', credentials),
+  verifyToken: (token) => api.get('/api/admin/auth/verify', {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+  
+  // Admin operations
   setupVenues: () => api.post('/api/admin/venues/setup'),
   uploadQuestions: (questions) => api.post('/api/admin/questions', { questions }),
   assignQuestions: () => api.post('/api/admin/assign-questions-to-venues'),
