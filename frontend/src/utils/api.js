@@ -17,6 +17,7 @@ export const venueAPI = {
 
 // Teams API
 export const teamAPI = {
+  login: (credentials) => api.post('/api/teams/login', credentials),
   register: (teamData) => api.post('/api/teams/register', teamData),
   getTeam: (teamId) => api.get(`/api/teams/${teamId}`),
 };
@@ -61,8 +62,10 @@ export const adminAPI = {
   assignQuestions: () => api.post('/api/admin/assign-questions-to-venues'),
   getQRCodes: (venueId) => api.get(`/api/admin/qr-codes/venue/${venueId}`),
   getAllQRCodes: () => api.get('/api/admin/qr-codes/all'),
-  getStats: () => api.get('/api/admin/stats'),
-  resetEvent: () => api.post('/api/admin/reset-event'),
+  // Registration Codes
+  generateRegistrationCodes: (data) => api.post('/api/admin/registration-codes/generate', data),
+  getRegistrationCodes: () => api.get('/api/admin/registration-codes'),
+  deleteRegistrationCode: (codeId) => api.delete(`/api/admin/registration-codes/${codeId}`),
 };
 
 // Leaderboard API

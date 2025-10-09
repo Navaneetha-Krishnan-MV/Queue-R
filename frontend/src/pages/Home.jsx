@@ -1,31 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import TeamRegistration from '../components/Team/TeamRegistration';
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useTeamAuth } from '../context/TeamAuthContext';
 
 const Home = () => {
   const navigate = useNavigate();
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [teamData, setTeamData] = useState(null);
-
-  useEffect(() => {
-    const savedTeamData = localStorage.getItem('teamData');
-    if (savedTeamData) {
-      setTeamData(JSON.parse(savedTeamData));
-      setIsRegistered(true);
-    }
-  }, []);
-
-  const handleRegistrationSuccess = (team) => {
-    setTeamData(team);
-    setIsRegistered(true);
-  };
-
-  const handleStartOver = () => {
-    localStorage.removeItem('teamId');
-    localStorage.removeItem('teamData');
-    setIsRegistered(false);
-    setTeamData(null);
-  };
+  const { team, teamLogout } = useTeamAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -41,20 +20,45 @@ const Home = () => {
           </p>
         </div>
 
-        {!isRegistered ? (
-          <TeamRegistration onRegistrationSuccess={handleRegistrationSuccess} />
+        {!team ? (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white p-8 rounded-lg shadow-lg mb-6">
+              <div className="text-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800 mb-4">
+                  Welcome to QR Challenge!
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  To participate, you need to login or register your team.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link
+                    to="/team/login"
+                    className="bg-blue-600 text-white py-3 px-8 rounded-md hover:bg-blue-700 font-semibold text-lg transition-colors duration-200"
+                  >
+                    Team Login
+                  </Link>
+                  <Link
+                    to="/team/register"
+                    className="bg-green-600 text-white py-3 px-8 rounded-md hover:bg-green-700 font-semibold text-lg transition-colors duration-200"
+                  >
+                    Register Team
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="max-w-2xl mx-auto">
             <div className="bg-white p-8 rounded-lg shadow-lg mb-6">
               <div className="text-center mb-6">
                 <h2 className="text-3xl font-bold text-green-600 mb-2">
-                  ✅ Registration Complete!
+                  ✅ Logged In!
                 </h2>
                 <div className="text-lg text-gray-700 space-y-2">
-                  <p><strong>Team:</strong> {teamData.teamName}</p>
-                  <p><strong>Leader:</strong> {teamData.leaderName}</p>
-                  <p><strong>Venue:</strong> {teamData.venue}</p>
-                  <p><strong>Score:</strong> {teamData.score} points</p>
+                  <p><strong>Team:</strong> {team.teamName}</p>
+                  <p><strong>Leader:</strong> {team.leaderName}</p>
+                  <p><strong>Venue:</strong> {team.venue}</p>
+                  <p><strong>Score:</strong> {team.score} points</p>
                 </div>
               </div>
 

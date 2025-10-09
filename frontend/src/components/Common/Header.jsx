@@ -1,11 +1,26 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useTeamAuth } from '../../context/TeamAuthContext';
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const { team, teamLogout } = useTeamAuth();
   
   const isActive = (path) => {
     return location.pathname === path;
+  };
+
+  const handleAdminLogout = () => {
+    logout();
+    navigate('/admin/login');
+  };
+
+  const handleTeamLogout = () => {
+    teamLogout();
+    navigate('/');
   };
 
   return (
@@ -16,7 +31,7 @@ const Header = () => {
             🎯 QR Challenge
           </Link>
           
-          <nav className="flex space-x-6">
+          <nav className="flex items-center space-x-6">
             <Link 
               to="/" 
               className={`text-sm font-medium ${
@@ -37,16 +52,57 @@ const Header = () => {
             >
               Leaderboard
             </Link>
-            <Link 
-              to="/admin" 
-              className={`text-sm font-medium ${
-                isActive('/admin') 
-                  ? 'text-blue-600' 
-                  : 'text-gray-700 hover:text-blue-600'
-              }`}
-            >
-              Admin
-            </Link>
+            
+            {/* Team auth status */}
+            {team ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600">
+                  Team: <span className="font-semibold">{team.teamName}</span>
+                </span>
+                <button
+                  onClick={handleTeamLogout}
+                  className="text-sm font-medium text-red-600 hover:text-red-700"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link 
+                to="/team/login" 
+                className="text-sm font-medium text-gray-700 hover:text-blue-600"
+              >
+                Team Login
+              </Link>
+            )}
+
+            {/* Admin section */}
+            {user ? (
+              <div className="flex items-center space-x-4 border-l pl-6">
+                <Link 
+                  to="/admin" 
+                  className={`text-sm font-medium ${
+                    isActive('/admin') 
+                      ? 'text-blue-600' 
+                      : 'text-gray-700 hover:text-blue-600'
+                  }`}
+                >
+                  Admin Panel
+                </Link>
+                <button
+                  onClick={handleAdminLogout}
+                  className="text-sm font-medium text-red-600 hover:text-red-700"
+                >
+                  Admin Logout
+                </button>
+              </div>
+            ) : (
+              <Link 
+                to="/admin/login" 
+                className="text-sm font-medium text-gray-700 hover:text-blue-600 border-l pl-6"
+              >
+                Admin
+              </Link>
+            )}
           </nav>
         </div>
       </div>

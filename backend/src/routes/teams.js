@@ -2,15 +2,72 @@ const express = require('express');
 const db = require('../db/queries');
 const router = express.Router();
 
+// Team login
+router.post('/login', async (req, res) => {
+  try {
+    const { teamName, registrationCode } = req.body;
+
+    // Validate inputs
+    if (!teamName || !registrationCode) {
+      return res.status(400).json({
+        message: 'Team name and registration code are required'
+      });
+    }
+
+    // Check if team exists with this name
+    const team = await db.getTeamByName(teamName);
+    if (!team) {
+      return res.status(401).json({
+        message: 'Invalid team name or registration code'
+      });
+    }
+
+    // Verify the registration code matches this team
+    const codeValid = await db.verifyTeamRegistrationCode(team.id, registrationCode);
+    if (!codeValid) {
+      return res.status(401).json({
+        message: 'Invalid team name or registration code'
+      });
+    }
+
+    // Return team data
+    res.json({
+      message: 'Login successful',
+      team: {
+        id: team.id,
+        teamName: team.team_name,
+        leaderName: team.leader_name,
+        venue: team.venue_name,
+        venueId: team.venue_id,
+        score: team.score
+      }
+    });
+  } catch (error) {
+    console.error('Team login error:', error);
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
 // Register team
 router.post('/register', async (req, res) => {
   try {
-    const { teamName, leaderName, email, venueId } = req.body;
+    const { teamName, leaderName, email, venueId, registrationCode } = req.body;
 
     // Validate inputs
-    if (!teamName || !leaderName || !email || !venueId) {
-      return res.status(400).json({ 
-        message: 'All fields are required' 
+    if (!teamName || !leaderName || !email || !venueId || !registrationCode) {
+      return res.status(400).json({
+        message: 'All fields are required including registration code'
+      });
+    }
+
+    // Validate registration code
+    const validCode = await db.validateRegistrationCode(registrationCode);
+    if (!validCode) {
+      return res.status(400).json({
+        message: 'Invalid or already used registration code'
       });
     }
 
@@ -37,11 +94,14 @@ router.post('/register', async (req, res) => {
 
     // Create team
     const team = await db.createTeam(
-      teamName, 
-      leaderName, 
-      email, 
+      teamName,
+      leaderName,
+      email,
       parseInt(venueId)
     );
+
+    // Mark code as used
+    await db.useRegistrationCode(registrationCode, team.id);
 
     const teamWithVenue = await db.getTeamById(team.id);
 
@@ -58,9 +118,9 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Team registration error:', error);
-    res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
     });
   }
 });
