@@ -1,5 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { leaderboardAPI } from '../utils/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Trophy,
+  Users,
+  Target,
+  Medal,
+  RefreshCw,
+  Crown,
+  Award,
+  MapPin,
+  TrendingUp,
+  Loader2,
+  AlertCircle,
+  CheckCircle
+} from 'lucide-react';
 
 const Leaderboard = () => {
   const [leaderboard, setLeaderboard] = useState([]);
@@ -19,10 +37,10 @@ const Leaderboard = () => {
   useEffect(() => {
     // Initial fetch
     fetchData();
-    
+
     // Set up polling every 5 seconds
     const intervalId = setInterval(fetchData, 5000);
-    
+
     // Clean up interval on component unmount
     return () => clearInterval(intervalId);
   }, [fetchData]);
@@ -51,160 +69,271 @@ const Leaderboard = () => {
     }
   }, []);
 
+  const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
+    <Card className="shadow-md hover:shadow-lg transition-shadow">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className={`text-2xl sm:text-3xl font-bold ${color}`}>
+              {value}
+            </p>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground">{subtitle}</p>
+            )}
+          </div>
+          <div className={`p-3 rounded-full ${color.replace('text-', 'bg-').replace('-600', '-100')}`}>
+            <Icon className={`h-6 w-6 ${color}`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const VenueCard = ({ venue }) => (
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 bg-blue-100 rounded-full">
+            <MapPin className="h-4 w-4 text-blue-600" />
+          </div>
+          <h3 className="font-semibold text-lg">{venue.venueName}</h3>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="text-center">
+            <p className="text-muted-foreground">Teams</p>
+            <p className="font-bold text-lg text-blue-600">{venue.teamsCount}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-muted-foreground">Solved</p>
+            <p className="font-bold text-lg text-green-600">{venue.expiredQuestions}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-muted-foreground">Available</p>
+            <p className="font-bold text-lg text-purple-600">{venue.activeQuestions}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Loading leaderboard...</div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-lg font-medium">Loading leaderboard...</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-8">
-          🏆 Global Leaderboard
-        </h1>
-
-        {/* Statistics Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Total Teams</p>
-              <p className="text-3xl font-bold text-blue-600">{stats.totalTeams}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Total Attempts</p>
-              <p className="text-3xl font-bold text-purple-600">{stats.totalAttempts}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Accuracy</p>
-              <p className="text-3xl font-bold text-green-600">{stats.accuracy}%</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Top Team</p>
-              <p className="text-lg font-bold text-yellow-600 truncate">
-                {stats.topTeam?.teamName || 'N/A'}
-              </p>
-              <p className="text-sm text-gray-500">{stats.topTeam?.score || 0} pts</p>
-            </div>
-          </div>
-        )}
-
-        {/* Leaderboard Table */}
-        {leaderboard.length === 0 ? (
-          <div className="text-center text-gray-600 bg-white rounded-lg shadow p-8">
-            No teams registered yet
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Rank
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Team Name
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Leader
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Venue
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Score
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {leaderboard.map((team, index) => (
-                    <tr 
-                      key={team.teamId}
-                      className={`${
-                        index < 3 ? 'bg-yellow-50' : 'bg-white hover:bg-gray-50'
-                      } transition-colors`}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {index === 0 && <span className="text-3xl mr-2">🥇</span>}
-                          {index === 1 && <span className="text-3xl mr-2">🥈</span>}
-                          {index === 2 && <span className="text-3xl mr-2">🥉</span>}
-                          <span className="text-lg font-bold text-gray-900">
-                            #{team.rank}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {team.teamName}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {team.leaderName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {team.venueName}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
-                          {team.score} pts
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Venue Statistics */}
-        {stats && stats.venues && (
-          <div className="mt-8 bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold mb-4">Venue Statistics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {stats.venues.map((venue) => (
-                <div key={venue.venueName} className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">{venue.venueName}</h3>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-gray-600">
-                      Teams: <span className="font-medium text-gray-900">{venue.teamsCount}</span>
-                    </p>
-                    <p className="text-gray-600">
-                      Solved: <span className="font-medium text-green-600">{venue.expiredQuestions}</span>
-                    </p>
-                    <p className="text-gray-600">
-                      Available: <span className="font-medium text-blue-600">{venue.activeQuestions}</span>
-                    </p>
-                  </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <Card className="shadow-lg">
+            <CardHeader className="text-center pb-4">
+              <div className="flex justify-center mb-2">
+                <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white p-3 rounded-full">
+                  <Trophy className="h-8 w-8" />
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
+              <CardTitle className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                Global Leaderboard
+              </CardTitle>
+              <CardDescription className="text-base sm:text-lg">
+                Real-time rankings across all venues • Updates every 5 seconds
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
-        <div className="mt-8 text-center">
-          <button
-            onClick={() => fetchData() }
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
-          >
-            Refresh Leaderboard
-          </button>
+
+          {/* Leaderboard */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+                  <Medal className="h-6 w-6 text-yellow-600" />
+                  Team Rankings
+                </CardTitle>
+                <Button
+                  onClick={fetchData}
+                  variant="outline"
+                  size="sm"
+                  className="w-fit"
+                  >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0">
+              {leaderboard.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Alert>
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      No teams have registered yet. Be the first to join the competition!
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                        <th className="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider rounded-tl-lg">
+                          Rank
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+                          Team Name
+                        </th>
+                        
+                      
+                        <th className="px-4 py-3 text-right text-sm font-semibold uppercase tracking-wider rounded-tr-lg">
+                          Score
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {leaderboard.map((team, index) => {
+                        const getRowStyle = (rank) => {
+                          switch (rank) {
+                            case 1:
+                              return 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-400 hover:from-yellow-100 hover:to-yellow-150';
+                              case 2:
+                                return 'bg-gradient-to-r from-gray-50 to-gray-100 border-l-4 border-gray-400 hover:from-gray-100 hover:to-gray-150';
+                                case 3:
+                                  return 'bg-gradient-to-r from-amber-50 to-amber-100 border-l-4 border-amber-600 hover:from-amber-100 hover:to-amber-150';
+                            default:
+                              return 'bg-white hover:bg-gray-50';
+                            }
+                        };
+
+                        const getRankIcon = (rank) => {
+                          switch (rank) {
+                            case 1: return <Crown className="h-5 w-5 text-yellow-500" />;
+                            case 2: return <Medal className="h-5 w-5 text-gray-400" />;
+                            case 3: return <Award className="h-5 w-5 text-amber-600" />;
+                            default: return <span className="text-sm font-bold text-muted-foreground">#{rank}</span>;
+                          }
+                        };
+                        
+                        return (
+                          <tr
+                          key={team.teamId}
+                          className={`${getRowStyle(team.rank)} transition-colors`}
+                          >
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                {getRankIcon(team.rank)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-sm font-semibold ${index < 3 ? 'text-gray-900' : 'text-gray-700'}`}>
+                                  {team.teamName}
+                                </span>
+                                {index < 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Top {team.rank}
+                                  </Badge>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-right">
+                              <Badge
+                                variant={index < 3 ? "default" : "secondary"}
+                                className={`text-sm font-bold px-3 py-1 ${
+                                  index < 3 ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white' : ''
+                                }`}
+                                >
+                                {team.score.toFixed(3)} pts
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+              {/* Statistics Cards */}
+              {stats && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <StatCard
+                    title="Total Teams"
+                    value={stats.totalTeams}
+                    icon={Users}
+                    color="text-blue-600"
+                  />
+                  <StatCard
+                    title="Total Attempts"
+                    value={stats.totalAttempts}
+                    icon={Target}
+                    color="text-purple-600"
+                  />
+                  <StatCard
+                    title="Global Accuracy"
+                    value={`${stats.accuracy}%`}
+                    icon={TrendingUp}
+                    color="text-green-600"
+                  />
+                  <StatCard
+                    title="Leading Team"
+                    value={stats.topTeam?.teamName || 'N/A'}
+                    icon={Crown}
+                    color="text-yellow-600"
+                    subtitle={`${stats.topTeam?.score || 0} points`}
+                  />
+                </div>
+              )}
+
+          {/* Venue Statistics */}
+          {stats && stats.venues && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <MapPin className="h-6 w-6 text-blue-600" />
+                  Venue Statistics
+                </CardTitle>
+                <CardDescription>
+                  Real-time status of all competition venues
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {stats.venues.map((venue) => (
+                    <VenueCard key={venue.venueName} venue={venue} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
