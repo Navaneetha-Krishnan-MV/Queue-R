@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI } from '../../utils/api';
+import { adminAPI } from '@/utils/api';
 import VenueManagement from './VenueManagement';
 import QuestionUpload from './QuestionUpload';
 import QRGenerator from './QRGenerator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('setup');
@@ -22,79 +25,106 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-center mb-8">Admin Dashboard</h1>
-        
-        {/* Statistics Overview */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Total Venues</p>
-              <p className="text-3xl font-bold text-blue-600">{stats.totalVenues}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Total Teams</p>
-              <p className="text-3xl font-bold text-green-600">{stats.totalTeams}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Total Questions</p>
-              <p className="text-3xl font-bold text-purple-600">{stats.totalQuestions}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">Accuracy</p>
-              <p className="text-3xl font-bold text-yellow-600">{stats.accuracy}%</p>
-            </div>
-          </div>
-        )}
+    <div className="min-h-screen bg-muted/40">
+      <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-3xl font-bold text-center">Admin Dashboard</CardTitle>
+            <CardDescription className="text-center">
+              Manage event settings, questions, and QR codes
+            </CardDescription>
+          </CardHeader>
+          
+          {/* Statistics Overview */}
+          <CardContent>
+            {stats ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard 
+                  title="Total Venues" 
+                  value={stats.totalVenues} 
+                  icon={<Building2 className="h-5 w-5 text-blue-500" />}
+                  className="border-l-4 border-blue-500"
+                />
+                <StatCard 
+                  title="Total Teams" 
+                  value={stats.totalTeams} 
+                  icon={<Users className="h-5 w-5 text-green-500" />}
+                  className="border-l-4 border-green-500"
+                />
+                <StatCard 
+                  title="Total Questions" 
+                  value={stats.totalQuestions} 
+                  icon={<FileQuestion className="h-5 w-5 text-purple-500" />}
+                  className="border-l-4 border-purple-500"
+                />
+                <StatCard 
+                  title="Accuracy" 
+                  value={`${stats.accuracy}%`} 
+                  icon={<BarChart2 className="h-5 w-5 text-amber-500" />}
+                  className="border-l-4 border-amber-500"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-24 rounded-lg" />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="max-w-6xl mx-auto">
-          {/* Tabs */}
-          <div className="mb-6">
-            <nav className="flex space-x-4 border-b">
-              <button
-                onClick={() => setActiveTab('setup')}
-                className={`py-3 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'setup'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Setup
-              </button>
-              <button
-                onClick={() => setActiveTab('questions')}
-                className={`py-3 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'questions'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Questions
-              </button>
-              <button
-                onClick={() => setActiveTab('qr')}
-                className={`py-3 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'qr'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                QR Codes
-              </button>
-            </nav>
+        <Tabs defaultValue="setup" className="w-full">
+          <div className="overflow-x-auto pb-2">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="setup">Setup</TabsTrigger>
+              <TabsTrigger value="questions">Questions</TabsTrigger>
+              <TabsTrigger value="qr">QR Codes</TabsTrigger>
+            </TabsList>
           </div>
 
-          {/* Tab Content */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            {activeTab === 'setup' && <VenueManagement onUpdate={fetchStats} />}
-            {activeTab === 'questions' && <QuestionUpload onUpdate={fetchStats} />}
-            {activeTab === 'qr' && <QRGenerator />}
-          </div>
-        </div>
+          <TabsContent value="setup">
+            <Card>
+              <CardContent className="pt-6">
+                <VenueManagement onUpdate={fetchStats} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="questions">
+            <Card>
+              <CardContent className="pt-6">
+                <QuestionUpload onUpdate={fetchStats} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="qr">
+            <Card>
+              <CardContent className="pt-6">
+                <QRGenerator />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 };
+
+// StatCard component for displaying statistics
+const StatCard = ({ title, value, icon, className = '' }) => (
+  <Card className={`p-4 ${className}`}>
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <p className="text-2xl font-bold">{value}</p>
+      </div>
+      <div className="p-2 rounded-lg bg-muted">
+        {icon}
+      </div>
+    </div>
+  </Card>
+);
 
 export default Admin;

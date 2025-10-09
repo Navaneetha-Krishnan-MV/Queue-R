@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Progress } from '@/components/ui/progress';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Clock, Timer, Zap } from 'lucide-react';
 
-const QuestionTimer = ({ 
-  timeLimit = 20, 
-  onTimeUp, 
+const QuestionTimer = ({
+  timeLimit = 20,
+  onTimeUp,
   isActive = true,
-  onTimeUpdate 
+  onTimeUpdate
 }) => {
   const [timeRemaining, setTimeRemaining] = useState(timeLimit * 1000); // Convert to milliseconds
   const [isRunning, setIsRunning] = useState(isActive);
@@ -39,14 +43,14 @@ const QuestionTimer = ({
     }
 
     let lastUpdateTime = Date.now();
-    
+
     const updateTimer = () => {
       const now = Date.now();
       const elapsed = now - startTimeRef.current;
       const remaining = Math.max(0, (timeLimit * 1000) - elapsed);
-      
+
       setTimeRemaining(remaining);
-      
+
       if (onTimeUpdate) {
         onTimeUpdate(elapsed / 1000); // Pass in seconds for backward compatibility
       }
@@ -61,7 +65,7 @@ const QuestionTimer = ({
         animationFrameRef.current = requestAnimationFrame(updateTimer);
       }
     };
-    
+
     // Start the animation frame loop
     animationFrameRef.current = requestAnimationFrame(updateTimer);
 
@@ -82,41 +86,48 @@ const QuestionTimer = ({
     return 'bg-red-500';
   };
 
-  const getProgressPercentage = () => {
+  const getProgressValue = () => {
     return (timeRemaining / (timeLimit * 1000)) * 100;
   };
-  
+
   // Format time to show one decimal place
   const formatTime = (ms) => {
     return (ms / 1000).toFixed(1);
   };
 
+  const getTimerVariant = () => {
+    const percentage = (timeRemaining / (timeLimit * 1000)) * 100;
+    if (percentage <= 25) return 'destructive'; // Red for urgent
+    if (percentage <= 50) return 'secondary'; // Yellow for warning
+    return 'default'; // Green for normal
+  };
+
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-sm font-medium text-gray-700">
-          Time Remaining
-        </span>
-        <span className={`text-2xl font-bold ${
-          timeRemaining <= 5 ? 'text-red-600 animate-pulse' : 'text-gray-900'
-        }`}>
-          {formatTime(timeRemaining)}s
-        </span>
-      </div>
-      
-      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-        <div 
-          className={`h-full transition-all duration-100 ease-linear ${getProgressColor()}`}
-          style={{ width: `${getProgressPercentage()}%` }}
-        />
-      </div>
-      
+    <>
+     <div className="text-center">
+            <Badge
+              variant={getTimerVariant()}
+              className={`text-sm sm:text--lg md:text-lg font-mono font-bold px-2 py-1 sm:px-3 sm:py-1 ${
+                timeRemaining <= 5 ? 'animate-pulse scale-110' : ''
+              }`}
+              >
+              <Clock className="h-5 w-5 sm:h-4 sm:w-4 mr-2" />
+              {formatTime(timeRemaining)}s
+            </Badge>
+        </div>
+      <Progress
+                value={getProgressValue()}
+                className="h-4"
+              />
+              <div className="space-y-2">
       {timeRemaining <= 5000 && isRunning && (
-        <p className="text-center text-red-600 text-sm mt-2 font-semibold animate-pulse">
-          Hurry up! ⏰
-        </p>
+        <div className="flex items-center justify-center gap-2 text-red-600 text-base sm:text-sm font-bold animate-pulse">
+          <Zap className="h-5 w-5 sm:h-4 sm:w-4" />
+          <span>Hurry up! ⏰</span>
+        </div>
       )}
-    </div>
+      </div>
+  </>
   );
 };
 

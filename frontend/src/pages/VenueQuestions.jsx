@@ -2,6 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { questionAPI } from '../utils/api';
 import QuestionTimer from '../components/Team/QuestionTimer';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import {
+  Clock,
+  Trophy,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  ArrowLeft,
+  Timer,
+  Star,
+  Zap
+} from 'lucide-react';
 
 const VenueQuestions = () => {
   const { venueId, questionId } = useParams();
@@ -113,154 +130,207 @@ const VenueQuestions = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Loading question...</div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-lg font-medium">Loading question...</p>
+            <p className="text-sm text-muted-foreground">Please wait while we prepare your challenge</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (error && !question) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p className="font-medium">Error:</p>
-          <p>{error}</p>
-          <button
-            onClick={() => navigate(`/venue/${venueId}/questions`)}
-            className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-          >
-            Back to Questions
-          </button>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <Alert variant="destructive">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription className="mb-4">{error}</AlertDescription>
+            </Alert>
+            <Button
+              onClick={() => navigate(`/QRScanner`)}
+              className="w-full"
+              variant="outline"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to QR Scanner
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (result) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto text-center">
-          <div className={`p-6 rounded-lg ${
-            result.isCorrect
-              ? 'bg-green-100 border border-green-400 text-green-700'
-              : 'bg-red-100 border border-red-400 text-red-700'
-          }`}>
-            <div className="text-6xl mb-4">
-              {result.isCorrect ? '🎉' : '❌'}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg">
+          <CardContent className="p-8 text-center">
+            <div className={`p-6 rounded-full mx-auto mb-6 w-fit ${
+              result.isCorrect
+                ? 'bg-green-100 text-green-600'
+                : 'bg-red-100 text-red-600'
+            }`}>
+              {result.isCorrect ? (
+                <CheckCircle className="h-16 w-16" />
+              ) : (
+                <XCircle className="h-16 w-16" />
+              )}
             </div>
-            <h2 className="text-2xl font-bold mb-4">
+
+            <h2 className={`text-3xl font-bold mb-4 ${
+              result.isCorrect ? 'text-green-600' : 'text-red-600'
+            }`}>
               {result.isCorrect ? 'Correct Answer!' : 'Incorrect Answer'}
             </h2>
-            <p className="text-lg mb-4">{result.message}</p>
+
+            <p className="text-lg mb-6 text-muted-foreground">
+              {result.message}
+            </p>
 
             {result.isCorrect && (
-              <>
-                <p className="font-medium text-xl mb-2">
-                  Points Awarded: {result.pointsAwarded}
-                </p>
-                <p className="text-sm">
-                  Time Taken: {result.timeTaken} seconds
-                </p>
-                <p className="text-sm">
-                  Total Score: {result.teamScore}
-                </p>
-              </>
-            )}
-          </div>
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center justify-center gap-2 text-lg font-semibold text-yellow-600">
+                  <Trophy className="h-5 w-5" />
+                  <span>Points Awarded: {result.pointsAwarded.toFixed(2)}</span>
+                </div>
 
-          <div className="mt-6 space-y-3">
-            <button
-              onClick={() => navigate(`/QRScanner`)}
-              className="w-full bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
-            >
-              Back to QRScanner
-            </button>
-            <button
-              onClick={() => navigate('/leaderboard')}
-              className="w-full bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700"
-            >
-              View Leaderboard
-            </button>
-          </div>
-        </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span>Time: {result.timeTaken}s</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Star className="h-4 w-4 text-purple-600" />
+                    <span>Score: {result.teamScore.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate('/QRScanner')}
+                className="w-full"
+                size="lg"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Back to QR Scanner
+              </Button>
+              <Button
+                onClick={() => navigate('/leaderboard')}
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                <Trophy className="h-4 w-4 mr-2" />
+                View Leaderboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          {/* Timer */}
-          <div className="mb-6">
-            <QuestionTimer
-              timeLimit={question.timeLimit || 20}
-              onTimeUp={handleTimeUp}
-              isActive={timerActive}
-              onTimeUpdate={handleTimeUpdate}
-            />
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Timer Card */}
+          <QuestionTimer
+            timeLimit={question.timeLimit || 20}
+            onTimeUp={handleTimeUp}
+            isActive={timerActive}
+            onTimeUpdate={handleTimeUpdate}
+          />
 
-          {/* Question */}
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mb-4">
-              Question #{questionId}
-            </h2>
-            <p className="text-lg mb-4">{question.questionText}</p>
-            <p className="text-sm text-gray-600">
-              Base Points: {question.basePoints} (Time bonus applies)
-            </p>
-          </div>
+          {/* Question Card */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                    <Timer className="h-6 w-6 text-blue-600" />
+                    Question #{questionId}
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Choose your answer carefully - time is limited!
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="w-fit text-sm">
+                  Base Points: {question.basePoints}
+                </Badge>
+              </div>
+            </CardHeader>
 
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
-          )}
+            <CardContent className="space-y-6">
+              {/* Question Text */}
+              <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <p className="text-lg sm:text-xl font-medium text-gray-800 leading-relaxed">
+                  {question.questionText}
+                </p>
+              </div>
 
-          {/* Options */}
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {Object.entries(question.options).map(([key, value]) => (
-              <label
-                key={key}
-                className={`flex items-center p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedOption === key
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:border-blue-300'
-                }`}
+              {/* Error Display */}
+              {error && (
+                <Alert variant="destructive">
+                  <XCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Options */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Select your answer:</Label>
+                <RadioGroup value={selectedOption} onValueChange={setSelectedOption}>
+                  {Object.entries(question.options).map(([key, value]) => (
+                    <div key={key} className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <RadioGroupItem value={key} id={key} />
+                      <Label htmlFor={key} className="flex-1 cursor-pointer">
+                        <span className="font-semibold mr-2 text-blue-600">{key}.</span>
+                        <span className="text-gray-700">{value}</span>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting || !selectedOption || !timerActive}
+                className="w-full"
+                size="lg"
               >
-                <input
-                  type="radio"
-                  name="option"
-                  value={key}
-                  checked={selectedOption === key}
-                  onChange={(e) => setSelectedOption(e.target.value)}
-                  className="mr-3 w-5 h-5 text-blue-600"
-                />
-                <span className="flex-1">
-                  <span className="font-semibold mr-2">{key}.</span>
-                  {value}
-                </span>
-              </label>
-            ))}
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Submit Answer
+                  </>
+                )}
+              </Button>
 
-            <button
-              type="submit"
-              disabled={submitting || !selectedOption || !timerActive}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg"
-            >
-              {submitting ? 'Submitting...' : 'Submit Answer'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Points Formula: Base Points ({question.basePoints}) - Time Taken
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Faster answers earn more points!
-            </p>
-          </div>
+              {/* Points Information */}
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 mb-1">
+                  Points Formula: Base Points ({question.basePoints}) - Time Taken
+                </p>
+                <p className="text-xs text-gray-600">
+                  Answer faster to earn more points! ⏱️
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
