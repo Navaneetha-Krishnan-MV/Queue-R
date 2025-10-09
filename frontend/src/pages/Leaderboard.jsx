@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { leaderboardAPI } from '../utils/api';
-import { io } from 'socket.io-client';
 
 const Leaderboard = () => {
   const [leaderboard, setLeaderboard] = useState([]);
@@ -9,44 +8,48 @@ const Leaderboard = () => {
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState('global'); // global or venue
 
-  useEffect(() => {
-    fetchLeaderboard();
-    fetchStats();
-    
-    // Setup socket connection for real-time updates
-    const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
-    
-    socket.emit('join-leaderboard');
-    
-    socket.on('leaderboard-update', () => {
-      fetchLeaderboard();
-      fetchStats();
-    });
-
-    return () => {
-      socket.disconnect();
-    };
+  const fetchData = useCallback(async () => {
+    try {
+      await Promise.all([fetchLeaderboard(), fetchStats()]);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
   }, []);
 
-  const fetchLeaderboard = async () => {
+  useEffect(() => {
+    // Initial fetch
+    fetchData();
+    
+    // Set up polling every 5 seconds
+    const intervalId = setInterval(fetchData, 5000);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [fetchData]);
+
+  const fetchLeaderboard = useCallback(async () => {
     try {
       const response = await leaderboardAPI.getGlobal();
       setLeaderboard(response.data);
+      return response.data;
     } catch (error) {
       setError('Failed to load leaderboard');
+      throw error;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await leaderboardAPI.getStats();
       setStats(response.data);
+      return response.data;
     } catch (error) {
-      console.error('Failed to load stats');
+      console.error('Failed to load stats:', error);
+      throw error;
     }
-  };
+  }, []);
 
   if (loading) {
     return (
