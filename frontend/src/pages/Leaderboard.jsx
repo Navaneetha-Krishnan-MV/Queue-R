@@ -200,7 +200,7 @@ const Leaderboard = () => {
 
         <div className="mt-8 text-center">
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => fetchData() }
             className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
           >
             Refresh Leaderboard
