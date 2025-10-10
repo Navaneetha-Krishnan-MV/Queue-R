@@ -11,9 +11,9 @@ router.get('/', async (req, res) => {
       id: v.id,
       venueName: v.venue_name,
       teamsCount: parseInt(v.teams_count),
-      availableSlots: 5 - parseInt(v.teams_count),
+      availableSlots: null, // No limit
       activeQuestionsCount: parseInt(v.active_questions_count),
-      isFull: parseInt(v.teams_count) >= 5
+      isFull: false // No limit, never full
     }));
 
     res.json(venuesData);
@@ -56,11 +56,11 @@ router.get('/:venueId', async (req, res) => {
         score: t.score
       })),
       teamsCount: parseInt(venue.teams_count),
-      availableSlots: 5 - parseInt(venue.teams_count),
+      availableSlots: null, // No limit
       totalQuestions: parseInt(venue.total_questions),
       activeQuestionsCount: parseInt(venue.active_questions_count),
       expiredQuestionsCount: parseInt(venue.total_questions) - parseInt(venue.active_questions_count),
-      isFull: parseInt(venue.teams_count) >= 5
+      isFull: false // No limit, never full
     });
   } catch (error) {
     console.error('Get venue details error:', error);

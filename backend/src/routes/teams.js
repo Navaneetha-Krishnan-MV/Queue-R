@@ -71,18 +71,13 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check venue exists and capacity
+    // Check venue exists
     const venue = await db.getVenueById(parseInt(venueId));
     if (!venue) {
       return res.status(404).json({ message: 'Venue not found' });
     }
 
-    const teamsCount = await db.getVenueTeamsCount(parseInt(venueId));
-    if (teamsCount >= 5) {
-      return res.status(400).json({
-        message: 'This venue is full (maximum 5 teams)'
-      });
-    }
+    // No team limit - removed capacity check
 
     // Check if team name or email already exists
     const existingTeam = await db.checkTeamExists(teamName, email);

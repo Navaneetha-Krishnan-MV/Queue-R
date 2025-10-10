@@ -200,19 +200,13 @@ const TeamRegistration = () => {
                       <SelectItem
                         key={venue.id}
                         value={String(venue.id)}
-                        disabled={venue.isFull}
                       >
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4" />
                           <span>{venue.venueName}</span>
                           <Badge variant="secondary" className="text-xs ml-auto">
-                            {venue.teamsCount}/5
+                            {venue.teamsCount} teams
                           </Badge>
-                          {venue.isFull && (
-                            <Badge variant="destructive" className="text-xs">
-                              FULL
-                            </Badge>
-                          )}
                         </div>
                       </SelectItem>
                     ))}
