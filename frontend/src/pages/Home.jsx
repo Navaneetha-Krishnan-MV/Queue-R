@@ -50,19 +50,20 @@ const Home = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button asChild size="lg" className="flex-1">
+                  <Button asChild variant="outline" size="lg" className="flex-1">
                     <Link to="/team/login" className="flex items-center gap-2">
                       <LogIn className="h-5 w-5" />
                       Team Login
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" size="lg" className="flex-1">
+                  <Button asChild  size="lg" className="flex-1">
                     <Link to="/team/register" className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
                       <span className='text-sm sm:text-md'>Register Team</span>
                     </Link>
                   </Button>
                 </div>
+
               </CardContent>
             </Card>
           </div>

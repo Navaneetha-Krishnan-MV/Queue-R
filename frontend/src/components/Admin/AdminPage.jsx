@@ -390,7 +390,7 @@ const AdminPage = () => {
                   name="count"
                   type="number"
                   min="1"
-                  max="100"
+                  max="500"
                   defaultValue="10"
                   required
                 />

@@ -7,8 +7,8 @@ const router = express.Router();
 router.post('/venues/setup', async (req, res) => {
   try {
     const venueNames = [
-      'Venue A', 'Venue B', 'Venue C', 'Venue D',
-      'Venue E', 'Venue F', 'Venue G', 'Venue H'
+      'Stone Bench', 'UCC', 'Royal Kitchen', 'Parking',
+      'ARC Drone Space', 'XO', 'Kalaiarangam', 'S & H Ground floor'
     ];
 
     const venues = await db.createVenues(venueNames);
